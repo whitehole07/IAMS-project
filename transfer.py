@@ -321,7 +321,10 @@ class TransferAbstract(object):
         # 4 - Reshape Orbit
         self.reshape_orbit(where_RE)
 
-        # 5 - Get Data
+        # 5 - Wait Maneuver
+        self.wait()
+
+        # 6 - Get Data
         dv_list: list = [x["dv"] for x in self.get_full_states() if "dv" in x]
         dt_list: list = [x["dt"] for x in self.get_full_states() if "dt" in x]
 

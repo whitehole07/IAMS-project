@@ -118,14 +118,14 @@ class OrbitPosition(object):
                 [[0, self.get_rr(0, dim=dim)[0]],
                  [0, self.get_rr(0, dim=dim)[1]],
                  [0, self.get_rr(0, dim=dim)[2]]])
-            N_arc: np.array = np.array(
+            n_arc: np.array = np.array(
                 [[0, self.get_rr(2 * pi - self.om, dim=dim)[0]],
                  [0, self.get_rr(2 * pi - self.om, dim=dim)[1]],
                  [0, self.get_rr(2 * pi - self.om, dim=dim)[2]]])
 
             ax.plot(ap_arc[0, :], ap_arc[1, :], ap_arc[2, :], '--', zdir='z', label='Apoapsis') if dim == 3 else ax.plot(ap_arc[0, :], ap_arc[1, :], '--', label='Apoapsis')
             ax.plot(pe_arc[0, :], pe_arc[1, :], pe_arc[2, :], '--', zdir='z', label='Periapsis') if dim == 3 else ax.plot(pe_arc[0, :], pe_arc[1, :], '--', label='Periapsis')
-            ax.plot(N_arc[0, :], N_arc[1, :], N_arc[2, :], '--', zdir='z', label='Ascending right') if dim == 3 else ax.plot(N_arc[0, :], N_arc[1, :], '--', label='Ascending right')
+            ax.plot(n_arc[0, :], n_arc[1, :], n_arc[2, :], '--', zdir='z', label='Ascending right') if dim == 3 else ax.plot(n_arc[0, :], n_arc[1, :], '--', label='Ascending right')
 
         self.plot(fig, ax, mode=mode)
 

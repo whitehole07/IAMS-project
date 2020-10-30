@@ -2,6 +2,7 @@ __all__ = ["OrbitsHandler"]
 
 from transfer import TransferAbstract
 import pandas as pd
+import os
 
 
 class IncompatibleObjectError(Exception):
@@ -44,9 +45,11 @@ class OrbitsHandler(object):
                     df.loc[len(df)] = tr.get_combination_array(where_CP, RP[0], RP[1], where_RE)
 
         if to_csv:
+            if not os.path.exists("csvs"):
+                os.mkdir("csvs")
+
             df.to_csv("csvs/%s_init(a=%.2f, e=%.2f, i=%.2f)_to_final(a=%.2f, e=%.2f, i=%.2f).csv"
                       % (transfer_name,
                          tr.orbit_i.a, tr.orbit_i.e, tr.orbit_i.i,
                          tr.orbit_f.a, tr.orbit_f.e, tr.orbit_f.i))
-
         return df

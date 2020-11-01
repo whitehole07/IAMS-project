@@ -38,6 +38,12 @@ class OrbitPosition(object):
         else:
             raise ValueError("Arguments must be (rr, vv, /mu/) or (a, e, i, OM, om, theta, /mu/)")
 
+    def get_hh(self, normed: bool = True) -> np.array:
+        if normed:
+            return np.cross(self.rr, self.vv) / np.linalg.norm(np.cross(self.rr, self.vv))
+        else:
+            return np.cross(self.rr, self.vv)
+
     def get_r(self, theta: float) -> float:
         return (self.a * (1 - self.e**2))/(1 + self.e*cos(theta))
 
@@ -50,14 +56,17 @@ class OrbitPosition(object):
         else:
             raise ValueError("'dim' should be equals to 2 or 3")
 
-    def get_vv(self, theta: float, dim: int = 3) -> np.array:
+    def get_vv(self, theta: float, dim: int = 3, cart: bool = False) -> np.array:
         if dim == 3:
             return kp2rv(self.a, self.e, self.i, self.OM, self.om, theta, self.mu)[1]
-        if dim == 2:
+        elif dim == 2:
             p: float = self.a * (1 - self.e**2)
             v_theta: float = sqrt(self.mu/p) * (1 + self.e*cos(theta))
             v_r: float = sqrt(self.mu/p) * (self.e*sin(theta))
-            return np.array([v_r, v_theta])
+            if not cart:
+                return np.array([v_r, v_theta, 0])
+            else:
+                return np.array([v_r*cos(theta) - v_theta*sin(theta), v_r*sin(theta) + v_theta*cos(theta), 0])
         else:
             raise ValueError("'dim' should be equals to 3")
 
@@ -98,7 +107,7 @@ class OrbitPosition(object):
         return fig, ax
 
     def plot_orbit(self, orbit_label: str = "Orbit", mode: str = 'show', dim: int = 3, theta_i: float = 0.0, theta_f: float = 2*pi,
-                   resolution: int = 1000, figsize: tuple = (8, 8), only_orbit: bool = False, fig=None, ax=None) -> None:
+                   resolution: int = 1000, figsize: tuple = (8, 8), fig=None, ax=None, **kwargs) -> None:
         if dim not in (2, 3):
             raise ValueError("'dim' should be equals to 2 or 3")
 
@@ -107,9 +116,9 @@ class OrbitPosition(object):
 
         rr_arc: np.array = self.get_orbit_arc(dim=dim, theta_i=theta_i, theta_f=theta_f, resolution=resolution)
 
-        ax.plot(rr_arc[0, :], rr_arc[1, :], rr_arc[2, :],  zdir='z', label=orbit_label) if dim == 3 else ax.plot(rr_arc[0, :], rr_arc[1, :], label=orbit_label)
+        ax.plot(rr_arc[0, :], rr_arc[1, :], rr_arc[2, :],  zdir='z', label=orbit_label, zorder=1) if dim == 3 else ax.plot(rr_arc[0, :], rr_arc[1, :], label=orbit_label, zorder=1)
 
-        if not only_orbit:
+        if not kwargs["only_orbit"]:
             ap_arc: np.array = np.array(
                 [[0, self.get_rr(pi, dim=dim)[0]],
                  [0, self.get_rr(pi, dim=dim)[1]],
@@ -126,6 +135,20 @@ class OrbitPosition(object):
             ax.plot(ap_arc[0, :], ap_arc[1, :], ap_arc[2, :], '--', zdir='z', label='Apoapsis') if dim == 3 else ax.plot(ap_arc[0, :], ap_arc[1, :], '--', label='Apoapsis')
             ax.plot(pe_arc[0, :], pe_arc[1, :], pe_arc[2, :], '--', zdir='z', label='Periapsis') if dim == 3 else ax.plot(pe_arc[0, :], pe_arc[1, :], '--', label='Periapsis')
             ax.plot(n_arc[0, :], n_arc[1, :], n_arc[2, :], '--', zdir='z', label='Ascending right') if dim == 3 else ax.plot(n_arc[0, :], n_arc[1, :], '--', label='Ascending right')
+
+        if kwargs["velocity"] is True:
+            velocity_kwargs: dict = {key.replace("velocity_", ""): value for key, value in kwargs.items() if key.startswith("velocity_")}
+
+            rr, vv = self.get_rr(self.theta, dim=dim)[:dim], self.get_vv(self.theta, dim=dim, cart=True)[:dim]
+            ax.plot(*[[x] for x in rr], 'ok')
+            ax.quiver(*rr, *vv, color='black', zorder=2, **velocity_kwargs) if dim == 3 else ax.quiver(*rr, *vv, color='black', zorder=2, **velocity_kwargs)
+
+        if kwargs["angular_momentum"] is True and dim == 3:
+            angular_momentum_kwargs: dict = {key.replace("angular_momentum_", ""): value for key, value in kwargs.items() if key.startswith("angular_momentum_")}
+
+            hh: np.array = self.get_hh()
+            ax.plot([0], [0], [0], 'ok')
+            ax.quiver(0, 0, 0, *hh, color='black', zorder=3, **angular_momentum_kwargs)
 
         self.plot(fig, ax, mode=mode)
 

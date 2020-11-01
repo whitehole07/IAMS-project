@@ -1,6 +1,7 @@
 __all__ = ["OrbitsHandler"]
 
 from transfer import TransferAbstract
+import json
 import pandas as pd
 import os
 
@@ -32,22 +33,38 @@ class OrbitsHandler(object):
             else:
                 raise IncompatibleObjectError(f"Incompatible object passed: kwarg = '{key}': {type(value)}'")
 
-    def get_comparison_matrix(self, transfer_name: str) -> pd.DataFrame:
+        self._load_map_to_matlab()
+
+    def _load_map_to_matlab(self):
+        with open("map.json", "r") as f:
+            self.map: dict = json.load(f)
+
+    def get_comparison_matrix(self, transfer_name: str, map_to_matlab: bool = True) -> pd.DataFrame:
         try:
             tr: TransferAbstract = self.transfers[transfer_name]["transfer"]
         except KeyError:
             raise KeyError(f"'{transfer_name}' not found in transfers' list")
 
-        df: pd.DataFrame = pd.DataFrame(columns=["where_CP", "where_RP", "type_RP", "where_RE", "dv_tot", "dt_tot", "dv_list", "dt_list"])
+        df: pd.DataFrame = pd.DataFrame(columns=["where_CP" if not map_to_matlab else self.map["where_CP"]["name"],
+                                                 "where_RP" if not map_to_matlab else self.map["where_RP"]["name"],
+                                                 "type_RP" if not map_to_matlab else self.map["type_RP"]["name"],
+                                                 "where_RE" if not map_to_matlab else self.map["where_RE"]["name"],
+                                                 "dv_tot", "dt_tot", "dv_list", "dt_list"])
+
         for where_CP in ["first", "second"]:
             for RP in [("first", "same"), ("second", "opposite"), ("first", "opposite"), ("second", "same")]:
                 for where_RE in ["pericentre", "apocentre"]:
-                    df.loc[len(df)] = tr.get_combination_array(where_CP, RP[0], RP[1], where_RE)
+                    where_CP, where_RP, type_RP, where_RE, dv, dt, dv_list, dt_list = tr.get_combination_array(where_CP, RP[0], RP[1], where_RE)
+                    df.loc[len(df)] = [where_CP if not map_to_matlab else self.map["where_CP"][where_CP],
+                                       where_RP if not map_to_matlab else self.map["where_RP"][where_RP],
+                                       type_RP if not map_to_matlab else self.map["type_RP"][type_RP],
+                                       where_RE if not map_to_matlab else self.map["where_RE"][where_RE],
+                                       dv, dt, dv_list, dt_list]
 
         self.transfers[transfer_name]["comparison_matrix"] = df
         return df
 
-    def comparison_matrix_to_file(self, transfer_name: str, *, to_excel: bool = True, single_file: bool = True) -> None:
+    def comparison_matrix_to_file(self, transfer_name: str, *, to_excel: bool = True, single_file: bool = True, map_to_matlab: bool = True) -> None:
         try:
             tr: TransferAbstract = self.transfers[transfer_name]["transfer"]
             df: pd.DataFrame = self.transfers[transfer_name]["comparison_matrix"]
@@ -81,7 +98,16 @@ class OrbitsHandler(object):
             df[:]["dt_tot"].to_excel(f"csvs/{name}/dt_tot.xlsx")
 
             for index, row in df.iterrows():
-                dir_name: str = f"where_CP='{row['where_CP']}'_where_RP='{row['where_RP']}'_type_RP='{row['type_RP']}'_where_RE='{row['where_RE']}'"
+                if map_to_matlab:
+                    dir_name: str = f"""{self.map['where_CP']['name']}='{row[f"{self.map['where_CP']['name']}"]}'""" \
+                                    f"""_{self.map['where_RP']['name']}='{row[f"{self.map['where_RP']['name']}"]}'""" \
+                                    f"""_{self.map['type_RP']['name']}='{row[f"{self.map['type_RP']['name']}"]}'""" \
+                                    f"""_{self.map['where_RE']['name']}='{row[f"{self.map['where_RE']['name']}"]}'"""
+                else:
+                    dir_name: str = f"where_CP='{row['where_CP']}'" \
+                                    f"_where_RP='{row['where_RP']}'" \
+                                    f"_type_RP='{row['type_RP']}'" \
+                                    f"_where_RE='{row['where_RE']}'"
 
                 if not os.path.exists(f"csvs/{name}/{dir_name}"):
                     os.mkdir(f"csvs/{name}/{dir_name}")

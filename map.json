@@ -1,0 +1,22 @@
+{
+    "where_CP": {
+        "name": "choice_n",
+        "first": 1,
+        "second": 2
+    },
+    "type_RP": {
+        "name": "choice_a",
+        "same": 1,
+        "opposite": 2
+    },
+    "where_RP": {
+        "name": "choice_p",
+        "first": 1,
+        "second": 2
+    },
+    "where_RE": {
+        "name": "choice_o",
+        "pericentre": 1,
+        "apocentre": 2
+    }
+}

@@ -3,6 +3,7 @@ __all__ = ["TransferAbstract"]
 from orbit import OrbitPosition
 from math import cos, sin, acos, sqrt, pi, atan, tan, atan2
 from numpy import sign
+import numpy as np
 from utilities import wrap_to_2pi
 from copy import deepcopy
 
@@ -170,7 +171,7 @@ class TransferAbstract(object):
             raise ValueError("'where' must be 'first' or 'second'")
 
         if how not in ["same", "opposite"]:
-            raise ValueError("'how' must be 'first' or 'second'")
+            raise ValueError("'how' must be 'same' or 'opposite'")
 
         if not om_f:
             om_f: float = self.orbit_f.om if how == "same" else wrap_to_2pi(pi + self.orbit_f.om)
@@ -308,7 +309,18 @@ class TransferAbstract(object):
             "dv": [dv1, dv2]
         })
 
-    def get_combination_array(self, where_CP: str, where_RP: str, type_RP: str, where_RE: str) -> list:
+    @staticmethod
+    def one_impulse_coplanar_maneuver_cost(orbit_i: OrbitPosition, orbit_f: OrbitPosition) -> float:
+        vv_i: np.array = orbit_i.get_vv(orbit_i.theta, dim=2, cart=True)[:-1]
+        vv_f: np.array = orbit_f.get_vv(orbit_f.theta, dim=2, cart=True)[:-1]
+
+        v_i: float = np.linalg.norm(vv_i)
+        v_f: float = np.linalg.norm(vv_f)
+        cos_alpha: float = (np.dot(vv_i, vv_f)) / (v_i * v_f)
+
+        return sqrt(v_i**2 + v_f**2 - 2*v_i*v_f*cos_alpha)
+
+    def get_combination_array(self, where_CP: str, where_RP: str, type_RP: str, where_RE: str) -> tuple:
         # 1 - Clear all
         self.del_all()
 
@@ -331,7 +343,7 @@ class TransferAbstract(object):
         dv: float = sum([dv for x in dv_list for dv in x])
         dt: float = sum([dt for x in dt_list for dt in x])
 
-        return [where_CP, where_RP, type_RP, where_RE, dv, dt, dv_list, dt_list]
+        return where_CP, where_RP, type_RP, where_RE, dv, dt, dv_list, dt_list
 
     def _get_all_combinations_plot(self):
         for where_CP in ["first", "second"]:
